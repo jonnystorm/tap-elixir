@@ -1,0 +1,2 @@
+%{"procket": {:git, "git://github.com/msantos/procket.git", "eddc2d965f9b14abd06677cb2d1cf9c2ee9759ee", [tag: "0.5.1"]},
+  "tunctl": {:git, "https://github.com/msantos/tunctl.git", "3d84df508d04a80b38d38221fa2ee76c804c0624", []}}
