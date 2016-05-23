@@ -1,5 +1,7 @@
 # tap-elixir
 
+[![Build Status](https://travis-ci.org/jonnystorm/tap-elixir.svg?branch=master)](https://travis-ci.org/jonnystorm/tap-elixir)
+
 Perform raw send/receive over a Linux TAP interface.
 
 `tap_ex` is just a tiny wrapper for [msantos](https://github.com/msantos)'s Erlang library, [tunctl](https://github.com/msantos/tunctl).
