@@ -1,4 +1,4 @@
 ExUnit.start()
 
-ExUnit.configure exclude: [:driver]
+ExUnit.configure exclude: [:integrated]
 

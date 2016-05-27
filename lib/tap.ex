@@ -4,18 +4,14 @@
 # as published by Sam Hocevar. See the COPYING.WTFPL file for more details.
 
 defmodule TAP do
-  require Logger
-
   use GenServer
-
-  @driver Application.get_env :tap_ex, :driver
-
 
   ### Public API ###
 
-  @spec start :: {:ok, pid} | {:error, any}
-  def start do
-    GenServer.start __MODULE__, []
+  @spec start_link :: {:ok, pid} | {:error, any}
+  @spec start_link(binary) :: {:ok, pid} | {:error, any}
+  def start_link(if_name \\ "") do
+    GenServer.start_link __MODULE__, [%{if_name: if_name}]
   end
 
   @spec get_interface(pid) :: binary
@@ -28,8 +24,23 @@ defmodule TAP do
     GenServer.call pid, :receive
   end
 
+  @doc """
+  Sending a frame containing less than 14 bytes will quietly explode the tuncer
+  process, destroying the corresponding TAP interface. Sending a frame with more
+  than 4193920 bytes has the same effect. To avoid such subtleties, I've chosen
+  to clarify both constraints with guards.
+
+  Of course, none of this means you should actually send 4193920 bytes, and
+  interfaces aren't usually configured to accept more than 1532 bytes anyway (MTU
+   + 802.3 + 802.1Q + etc.).
+  """
   @spec send(pid, binary) :: :ok
-  def send(pid, data) when is_pid(pid) and is_binary(data) do
+  def send(pid, data)
+      when is_pid(pid)
+       and is_binary(data)
+       and byte_size(data) >= 14
+       and byte_size(data) <= 4193920 do
+
     GenServer.call pid, {:send, data}
   end
 
@@ -41,12 +52,18 @@ defmodule TAP do
 
   ### Private API ###
 
-  def init(_) do
-    {:ok, pid} = @driver.create
+  def init([opts]) do
+    try do
+      {:ok, pid} = :tuncer.create opts.if_name, [:tap, :no_pi, {:active, true}]
 
-    state = %{if_pid: pid, queue: []}
+      state = %{if_pid: pid, queue: []}
 
-    {:ok, state}
+      {:ok, state}
+
+    rescue
+      e in MatchError ->
+        {:stop, e}
+    end
   end
 
   def handle_info({:tuntap, if_pid, data}, %{if_pid: if_pid} = state) do
@@ -58,16 +75,16 @@ defmodule TAP do
     {:noreply, new_state}
   end
   def handle_info({:tuntap_error, if_pid, :eio}, %{if_pid: if_pid}) do
-    raise "Attempted to send over down interface."
+    {:stop, :enetdown, nil}
   end
 
   def handle_call({:send, data}, _from, %{if_pid: if_pid} = state) do
-    :ok = @driver.send if_pid, data
+    :ok = :tuncer.send if_pid, data
 
     {:reply, :ok, state}
   end
   def handle_call(:get_interface, _from, %{if_pid: if_pid} = state) do
-    interface = @driver.get_interface if_pid
+    interface = :tuncer.devname if_pid
 
     {:reply, interface, state}
   end
@@ -80,7 +97,9 @@ defmodule TAP do
     {:reply, {:ok, pdu}, new_state}
   end
 
+  def terminate(:enetdown, _) do
+  end
   def terminate(_, %{if_pid: if_pid}) do
-    @driver.destroy if_pid
+    :tuncer.destroy if_pid
   end
 end

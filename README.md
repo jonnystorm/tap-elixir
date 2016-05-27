@@ -47,6 +47,8 @@ Early on, I nearly gave up on [tunctl](https://github.com/msantos/tunctl) becaus
 
     iex> TAP.receive pid
     {:ok, <<51, 51, 0, 0, 0, 22, 190, 193, 149, 238, 53, 157, 134, 221, 96, 0, 0, 0, 0, 36, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, ...>>}
+    iex> TAP.receive pid
+    {:error, :enodata}
 
     iex> TAP.stop pid
     :ok
@@ -78,7 +80,7 @@ Once finished, the resulting bridge interface may be removed by issuing
 
 ## Whereof one cannot speak
 
-Sending over a down TAP interface will raise a RuntimeError.
+Sending over a down TAP interface will cause the **linked** GenServer to `:EXIT`.
 This is more intrusive than merely emitting a message as `tuncer` does in Active mode, but the feedback is obvious and immediate.
 
 Sending a frame containing less than 14 bytes will quietly explode the `tuncer` process, destroying the corresponding TAP interface.

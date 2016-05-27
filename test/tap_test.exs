@@ -6,27 +6,38 @@
 defmodule TAPTest do
   use ExUnit.Case, async: true
 
-  require Logger
+  @moduletag :integrated
 
   setup do
-    {:ok, pid} = TAP.start
+    {:ok, pid} = TAP.start_link
 
     {:ok, tap_pid: pid}
   end
 
-  test "Sends data", %{tap_pid: pid} do
-    assert TAP.send(pid, <<0 :: 14*8>>) == :ok
+  test "TAP exits when sending over down interface", %{tap_pid: pid} do
+    Process.flag :trap_exit, true
+
+    TAP.send(pid, <<0 :: 14*8>>) == :ok
+
+    assert_receive {:EXIT, pid, :enetdown}
+
+    :timer.sleep 50
+    assert Process.alive?(pid) == false
   end
 
-  test "Raises when sending too little data", %{tap_pid: pid} do
-    catch_exit(TAP.send pid, <<0 :: 13*8>>)
+  test "TAP raises when sending too little data", %{tap_pid: pid} do
+    assert_raise FunctionClauseError, fn ->
+      TAP.send pid, <<0 :: 13*8>>
+    end
   end
 
-  test "Raises when sending too much data", %{tap_pid: pid} do
-    catch_exit(TAP.send pid, <<0 :: 4193921*8>>)
+  test "TAP raises when sending too much data", %{tap_pid: pid} do
+    assert_raise FunctionClauseError, fn ->
+      TAP.send pid, <<0 :: 4193921*8>>
+    end
   end
 
-  test "Raises when sending bitstring as data", %{tap_pid: pid} do
+  test "TAP raises when sending bitstring as data", %{tap_pid: pid} do
     bits = 14 * 8 + 1
 
     assert_raise FunctionClauseError, fn ->
