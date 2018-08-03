@@ -1,4 +1,4 @@
-# Copyright © 2016 Jonathan Storm <the.jonathan.storm@gmail.com>
+# Copyright © 2018 Jonathan Storm <jds@idio.link>
 # This work is free. You can redistribute it and/or modify it under the
 # terms of the Do What The Fuck You Want To Public License, Version 2,
 # as published by Sam Hocevar. See the COPYING.WTFPL file for more details.
@@ -14,34 +14,43 @@ defmodule TAPTest do
     {:ok, tap_pid: pid}
   end
 
-  test "TAP exits when sending over down interface", %{tap_pid: pid} do
-    Process.flag :trap_exit, true
+  test "TAP exits when sending over down interface",
+       %{tap_pid: pid}
+  do
+    Process.flag(:trap_exit, true)
 
-    TAP.send(pid, <<0 :: 14*8>>) == :ok
+    assert TAP.send(pid, <<0::14*8>>) == :ok
 
     assert_receive {:EXIT, pid, :enetdown}
 
     :timer.sleep 50
+
     assert Process.alive?(pid) == false
   end
 
-  test "TAP raises when sending too little data", %{tap_pid: pid} do
+  test "TAP raises when sending too little data",
+       %{tap_pid: pid}
+  do
     assert_raise FunctionClauseError, fn ->
-      TAP.send pid, <<0 :: 13*8>>
+      TAP.send pid, <<0::13*8>>
     end
   end
 
-  test "TAP raises when sending too much data", %{tap_pid: pid} do
+  test "TAP raises when sending too much data",
+       %{tap_pid: pid}
+  do
     assert_raise FunctionClauseError, fn ->
-      TAP.send pid, <<0 :: 4193921*8>>
+      TAP.send pid, <<0::4193921*8>>
     end
   end
 
-  test "TAP raises when sending bitstring as data", %{tap_pid: pid} do
+  test "TAP raises when sending bitstring as data",
+       %{tap_pid: pid}
+  do
     bits = 14 * 8 + 1
 
     assert_raise FunctionClauseError, fn ->
-      TAP.send pid, <<0 :: size(bits)>>
+      TAP.send pid, <<0::size(bits)>>
     end
   end
 
